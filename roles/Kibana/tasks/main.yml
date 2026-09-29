@@ -1,0 +1,14 @@
+---
+
+- name: Install required packages
+  become: true
+  ansible.builtin.apt:
+    name: apt-transport-https
+
+- name: Add Elasticsearch APT repository and Install it
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main"
+    filename: elastic-9.x
+    state: present
+    update_cache: true
+  when: ansible_distribution == "Ubuntu"

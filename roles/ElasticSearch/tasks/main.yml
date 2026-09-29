@@ -1,4 +1,4 @@
-
+---
 
 - name: Create directory for installation
   ansible.builtin.file:
@@ -55,6 +55,44 @@
     state: present
   when: ansible_distribution == "CentOS"
 
+- name: Configure the elasticsearch.yml for both hosts
+  tags: config
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/elasticsearch/elasticsearch.yml
+    block: |
+      cluster.name: my-cluster
+      network.host: 0.0.0.0
+      transport.host: 0.0.0.0
+      action.auto_create_index: .monitoring*,.watches,.triggered_watches,.watcher-history*,.ml*
+    marker: "# {mark} ANSIBLE MANAGED ELASTICSEARCH CONFIG"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Generate Elasticsearch enrollment token
+  tags: enroll
+  become: true
+  ansible.builtin.command:
+    cmd: /usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s node
+  register: enrollment_token_result
+  changed_when: true
+  when: ansible_distribution == "Ubuntu"
+
+- name: Store Elasticsearch enrollment token
+  tags: enroll
+  become: true
+  ansible.builtin.set_fact:
+    elasticsearch_enrollment_token: "{{ enrollment_token_result.stdout | trim }}"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Enroll Elasticsearch node
+  tags: enroll
+  become: true
+  ansible.builtin.command:
+    cmd: >
+      /usr/share/elasticsearch/bin/elasticsearch-reconfigure-node
+      --enrollment-token "{{ hostvars[groups['web_servers'][0]]['elasticsearch_enrollment_token'] }}"
+  when: ansible_distribution == "CentOS"
+
 - name: Start the elasticsearch service
   tags: start
   become: true
@@ -68,15 +106,3 @@
   become: true
   ansible.builtin.systemd:
     daemon_reload: true
-
-- name: Configure the elasticsearch.yml for both hosts
-  tags: config
-  become: true
-  ansible.builtin.blockinfile:
-    path: /etc/elasticsearch/elasticsearch.yml
-    block: |
-      cluster.name: my-cluster
-      network.host: 0.0.0.0
-      transport.host: 0.0.0.0
-      action.auto_create_index: .monitoring*,.watches,.triggered_watches,.watcher-history*,.ml*
-    marker: "# {mark} ANSIBLE MANAGED ELASTICSEARCH CONFIG"
