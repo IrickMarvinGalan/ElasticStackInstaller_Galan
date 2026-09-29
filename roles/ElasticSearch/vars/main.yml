@@ -1,9 +1,12 @@
 ---
 
-control_home: "/home/qimagalan-workstation"
+signkey_url: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+debpkg_link: "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-amd64.deb"
+debpkg_chksum: "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-amd64.deb.sha512"
+rpmpkg_link: "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-x86_64.rpm"
+rpmpkg_chksum: "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-x86_64.rpm.sha512"
 elastic_dir: "{{ ansible_env.HOME }}/ElasticStack"
-elastic_dl: "{{ elastic_dir }}/elasticsearch-9.5.4-linux-x86_64.tar.gz"
-extracted_dir: "{{ elastic_dir }}/elasticsearch-9.5.4"
-template_path: "{{ control_home }}/ElasticStackInstaller_Galan/templates/elasticsearch.yml.j2"
-config_path: "{{ extracted_dir }}/config/elasticsearch.yml"
+
+deb_elastic: "{{ elastic_dir }}/elasticsearch-9.5.4-amd64.deb"
+rpm_elastic: "{{ elastic_dir }}/elasticsearch-9.5.4-x86_64.rpm"
 

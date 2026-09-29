@@ -1,53 +1,82 @@
----
+
 
 - name: Create directory for installation
   ansible.builtin.file:
     path: "{{ elastic_dir }}"
     state: directory
 
-- name: Download Elastic Search from archive
+- name: Download the signing key
+  become: true
   ansible.builtin.get_url:
-    url: "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz"
-    dest: "{{ elastic_dl }}"
-    checksum: "sha512:https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz.sha512"
-
-- name: Decompress Elastic Search
-  ansible.builtin.unarchive:
-    src: "{{ elastic_dl }}"
+    url: "{{ signkey_url }}"
     dest: "{{ elastic_dir }}"
-    remote_src: true
+  when: ansible_distribution == "Ubuntu"
 
-- name: Create the elasticsearch service in managed nodes
-  ansible.builtin.copy:
-    content: |
-      [Unit]
-      Description=Elasticsearch
-      Wants=network-online.target
-      After=network-online.target
+- name: Extract gpg key
+  become: true
+  ansible.builtin.command:
+    cmd: gpg --dearmor --output /usr/share/keyrings/elasticsearch-keyring.gpg "{{ elastic_dir }}"
+    creates: /usr/share/keyrings/elasticsearch-keyring.gpg
+  when: ansible_distribution == "Ubuntu"
 
-      [Service]
-      Type=notify
-      User=elasticsearch
-      Group=elasticsearch
+- name: Import Signing Key for CentOS
+  become: true
+  ansible.builtin.rpm_key:
+    key: "{{ signkey_url }}"
+    state: present
+  when: ansible_distribution == "CentOS"
 
-      ExecStart=/usr/share/elasticsearch/bin/systemd-entrypoint -p ${PID_DIR}/elasticsearch.pid
+- name: Download Elastic Search deb pkg
+  ansible.builtin.get_url:
+    url: "{{ debpkg_link }}"
+    dest: "{{ elastic_dir }}"
+    checksum: "sha512:{{ debpkg_chksum }}"
+  when: ansible_distribution == "Ubuntu"
 
-      Restart=on-failure
-      RestartSec=10
+- name: Download Elastic Search rpm pkg
+  ansible.builtin.get_url:
+    url: " {{ rpmpkg_link }}"
+    dest: "{{ elastic_dir }}"
+    checksum: "sha512:{{ rpmpkg_chksum }}"
+  when: ansible_distribution == "CentOS"
 
-      LimitNOFILE=65535
-      LimitNPROC=4096
-      TimeoutStartSec=900
-      TimeoutStopSec=900
+- name: Install from deb pkg
+  tags: install
+  become: true
+  ansible.builtin.apt:
+    deb: "{{ deb_elastic }}"
+  when: ansible_distribution == "Ubuntu"
 
-      Environment=ES_PATH_CONF=/etc/elasticsearch
-      Environment=PID_DIR=/run/elasticsearch
+- name: Install from rpm pkg
+  tags: install
+  become: true
+  ansible.builtin.dnf:
+    name: "{{ rpm_elastic }}"
+    state: present
+  when: ansible_distribution == "CentOS"
 
-      [Install]
-      WantedBy=multi-user.target
+- name: Start the elasticsearch service
+  tags: start
+  become: true
+  ansible.builtin.service:
+    name: elasticsearch
+    state: started
+    enabled: true
 
-- name: Copy jinja configurations to elasticsearch.yml
+- name: Reload systemd daemon
+  tags: reload
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Configure the elasticsearch.yml for both hosts
   tags: config
-  ansible.builtin.template:
-    src: "{{ template_path }}"
-    dest: "{{ config_path }}"
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/elasticsearch/elasticsearch.yml
+    block: |
+      cluster.name: my-cluster
+      network.host: 0.0.0.0
+      transport.host: 0.0.0.0
+      action.auto_create_index: .monitoring*,.watches,.triggered_watches,.watcher-history*,.ml*
+    marker: "# {mark} ANSIBLE MANAGED ELASTICSEARCH CONFIG"
