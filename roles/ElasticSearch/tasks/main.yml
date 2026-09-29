@@ -1,0 +1,53 @@
+---
+
+- name: Create directory for installation
+  ansible.builtin.file:
+    path: "{{ elastic_dir }}"
+    state: directory
+
+- name: Download Elastic Search from archive
+  ansible.builtin.get_url:
+    url: "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz"
+    dest: "{{ elastic_dl }}"
+    checksum: "sha512:https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz.sha512"
+
+- name: Decompress Elastic Search
+  ansible.builtin.unarchive:
+    src: "{{ elastic_dl }}"
+    dest: "{{ elastic_dir }}"
+    remote_src: true
+
+- name: Create the elasticsearch service in managed nodes
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      Description=Elasticsearch
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      Type=notify
+      User=elasticsearch
+      Group=elasticsearch
+
+      ExecStart=/usr/share/elasticsearch/bin/systemd-entrypoint -p ${PID_DIR}/elasticsearch.pid
+
+      Restart=on-failure
+      RestartSec=10
+
+      LimitNOFILE=65535
+      LimitNPROC=4096
+      TimeoutStartSec=900
+      TimeoutStopSec=900
+
+      Environment=ES_PATH_CONF=/etc/elasticsearch
+      Environment=PID_DIR=/run/elasticsearch
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Copy jinja configurations to elasticsearch.yml
+  tags: config
+  ansible.builtin.template:
+    src: "{{ template_path }}"
+    dest: "{{ config_path }}"

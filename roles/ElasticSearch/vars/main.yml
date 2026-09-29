@@ -1,0 +1,9 @@
+---
+
+control_home: "/home/qimagalan-workstation"
+elastic_dir: "{{ ansible_env.HOME }}/ElasticStack"
+elastic_dl: "{{ elastic_dir }}/elasticsearch-9.5.4-linux-x86_64.tar.gz"
+extracted_dir: "{{ elastic_dir }}/elasticsearch-9.5.4"
+template_path: "{{ control_home }}/ElasticStackInstaller_Galan/templates/elasticsearch.yml.j2"
+config_path: "{{ extracted_dir }}/config/elasticsearch.yml"
+
