@@ -3,12 +3,63 @@
 - name: Install required packages
   become: true
   ansible.builtin.apt:
-    name: apt-transport-https
-
-- name: Add Elasticsearch APT repository and Install it
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main"
-    filename: elastic-9.x
+    name:
+      - apt-transport-https
     state: present
-    update_cache: true
   when: ansible_distribution == "Ubuntu"
+
+- name: Download Kibana deb pkg
+  ansible.builtin.get_url:
+    url: "{{ debpkg_link }}"
+    dest: "{{ elastic_dir }}"
+    checksum: "sha512:{{ debpkg_chksum }}"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Download Kibana rpm pkg
+  ansible.builtin.get_url:
+    url: " {{ rpmpkg_link }}"
+    dest: "{{ elastic_dir }}"
+    checksum: "sha512:{{ rpmpkg_chksum }}"
+  when: ansible_distribution == "CentOS"
+
+- name: Install from deb pkg
+  tags: install
+  become: true
+  ansible.builtin.apt:
+    deb: "{{ deb_elastic }}"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install from rpm pkg
+  tags: install
+ become: true
+  ansible.builtin.dnf:
+    name: "{{ rpm_elastic }}"
+    state: present
+  when: ansible_distribution == "CentOS"
+
+- name: Generate enrollment token
+  tags: enroll
+  become: true
+  ansible.builtin.command:
+    cmd: /usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana
+  register: kibana_token
+
+- name: Write contents of kibana_token
+  tags: enroll
+  ansible.builtin.copy:
+    content: |
+      "{{ kibana_token.stdout }}"
+    dest: "{{ elastic_dir }}/kibanatoken"
+
+- name: Start and Enable Kibana Service
+  ansible.builtin.service:
+    name: kibana
+    state: started
+    enabled: true
+  become: true
+
+- name: Reload systemd daemon
+  tags: reload
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true

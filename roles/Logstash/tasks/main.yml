@@ -1,0 +1,40 @@
+---
+
+- name: Add the apt repository to sources list
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main"
+    filename: elastic-9.x
+    state: present
+    update_cache: true #refresh the repository list after adding
+  when: ansible_distribution == "Ubuntu"
+
+- name: Add the yum repository source
+  become: true
+  ansible.builtin.yum_repository:
+    name: elastic-9.x
+    description: Elastic repository for 9.x packages
+    baseurl: https://artifacts.elastic.co/packages/9.x/yum
+    gpgcheck: true
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    enabled: true
+    file: elastic-9.x
+  when: ansible_distribution == "CentOS"
+
+- name: Refresh repository list before installing logstash
+  become: true
+  ansible.builtin.package:
+    update_cache: true
+
+- name: Install the logstash from repository source
+  become: true
+  ansible.builtin.package:
+    name: logstash
+    state: present
+
+- name: Start and Enable Logstash
+  become: true
+  ansible.builtin.service:
+    name: logstash
+    state: started
+    enabled: true

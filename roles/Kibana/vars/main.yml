@@ -1,0 +1,10 @@
+---
+
+debpkg_link: "https://artifacts.elastic.co/downloads/kibana/kibana-9.5.4-amd64.deb"
+debpkg_chksum: "https://artifacts.elastic.co/downloads/kibana/kibana-9.5.4-amd64.deb.sha512"
+rpmpkg_link: "https://artifacts.elastic.co/downloads/kibana/kibana-9.5.4-x86_64.rpm"
+rpmpkg_chksum: "https://artifacts.elastic.co/downloads/kibana/kibana-9.5.4-x86_64.rpm.sha512"
+elastic_dir: "{{ ansible_env.HOME }}/ElasticStack"
+
+deb_elastic: "{{ elastic_dir }}/kibana-9.5.4-amd64.deb"
+rpm_elastic: "{{ elastic_dir }}/kibana-9.5.4-x86_64.rpm"

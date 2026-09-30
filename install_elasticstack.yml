@@ -3,5 +3,20 @@
 - hosts:
     - web_servers
     - file_servers
+  tags: elasticsearch
   roles:
     - ElasticSearch
+
+- hosts:
+    - web_servers
+    - file_servers
+  tags: kibana
+  roles:
+    - Kibana
+
+- hosts:
+    - web_servers
+    - file_servers
+  tags: logstash
+  roles:
+    - Logstash
