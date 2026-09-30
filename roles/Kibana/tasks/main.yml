@@ -31,7 +31,7 @@
 
 - name: Install from rpm pkg
   tags: install
- become: true
+  become: true
   ansible.builtin.dnf:
     name: "{{ rpm_elastic }}"
     state: present
