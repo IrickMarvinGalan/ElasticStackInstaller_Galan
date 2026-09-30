@@ -37,6 +37,12 @@
     state: present
   when: ansible_distribution == "CentOS"
 
+- name: Restart elasticsearch service
+  become: true
+  ansible.builtin.service:
+    name: elasticsearch
+    state: restarted
+
 - name: Generate enrollment token
   tags: enroll
   become: true
